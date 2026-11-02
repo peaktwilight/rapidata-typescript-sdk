@@ -11,6 +11,7 @@ export interface RapidataRuntimeConfig {
   };
   upload: {
     cacheToDisk: boolean;
+    allowLocalFileUploads: boolean;
     cacheLocation: string;
     maxWorkers: number;
     batchSize: number;
@@ -27,6 +28,7 @@ export const rapidataConfig: RapidataRuntimeConfig = {
   },
   upload: {
     cacheToDisk: false,
+    allowLocalFileUploads: false,
     cacheLocation: ".rapidata-cache",
     maxWorkers: 4,
     batchSize: 25,

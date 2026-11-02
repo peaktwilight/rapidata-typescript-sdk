@@ -759,6 +759,9 @@ class AssetUploader {
       const response = await this.api.asset.postAssetUrl({ url: asset });
       uploadedName = response.fileName;
     } else if (existsSync(asset)) {
+      if (!rapidataConfig.upload.allowLocalFileUploads) {
+        throw new RapidataError("Local file uploads are disabled. Enable rapidataConfig.upload.allowLocalFileUploads to upload local assets.");
+      }
       const fileName = path.basename(asset);
       const file = new File([await readFile(asset)], fileName);
       const response = await this.api.asset.postAssetFile({
