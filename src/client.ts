@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { hostname, homedir } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -81,6 +81,7 @@ export interface RapidataApiClientOptions {
   certPath?: string;
   token?: RapidataToken;
   leeway?: number;
+  assetPathRoot?: string;
 }
 
 export interface RapidataClientOptions extends RapidataApiClientOptions {}
@@ -729,7 +730,7 @@ class OAuthTokenProvider {
 class AssetUploader {
   private readonly cache = new Map<string, string>();
 
-  constructor(private readonly api: RapidataApiClient) {}
+  constructor(private readonly api: RapidataApiClient, private readonly assetPathRoot?: string) {}
 
   clearCache() {
     this.cache.clear();
@@ -759,8 +760,25 @@ class AssetUploader {
       const response = await this.api.asset.postAssetUrl({ url: asset });
       uploadedName = response.fileName;
     } else if (existsSync(asset)) {
-      const fileName = path.basename(asset);
-      const file = new File([await readFile(asset)], fileName);
+      if (!this.assetPathRoot) {
+        throw new RapidataError("Local asset uploads require the assetPathRoot option.");
+      }
+
+      const [assetRoot, resolvedAsset] = await Promise.all([
+        realpath(this.assetPathRoot),
+        realpath(asset),
+      ]);
+      const relativeAsset = path.relative(assetRoot, resolvedAsset);
+      if (
+        relativeAsset === ".." ||
+        relativeAsset.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relativeAsset)
+      ) {
+        throw new RapidataError("Local asset path must be within assetPathRoot.");
+      }
+
+      const fileName = path.basename(resolvedAsset);
+      const file = new File([await readFile(resolvedAsset)], fileName);
       const response = await this.api.asset.postAssetFile({
         formData: { file },
       });
@@ -2639,7 +2657,7 @@ export class RapidataClient {
     }
 
     this.api = new RapidataApiClient(options);
-    this.uploader = new AssetUploader(this.api);
+    this.uploader = new AssetUploader(this.api, options.assetPathRoot);
     this.context = {
       api: this.api,
       uploader: this.uploader,
