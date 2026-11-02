@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import { hostname, homedir } from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -484,8 +484,13 @@ class CredentialManager {
 
   private async writeCredentials(credentials: StoredCredentialsFile) {
     await mkdir(path.dirname(this.configPath), { recursive: true });
-    await writeFile(this.configPath, `${JSON.stringify(credentials, null, 2)}\n`, "utf8");
-    await chmod(this.configPath, 0o600);
+    const file = await open(this.configPath, "w", 0o600);
+    try {
+      await file.chmod(0o600);
+      await file.writeFile(`${JSON.stringify(credentials, null, 2)}\n`, "utf8");
+    } finally {
+      await file.close();
+    }
   }
 
   private async fetch(url: string, init: RequestInit) {
