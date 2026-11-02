@@ -758,9 +758,9 @@ class AssetUploader {
     if (isUrlLike(asset)) {
       const response = await this.api.asset.postAssetUrl({ url: asset });
       uploadedName = response.fileName;
-    } else if (existsSync(asset)) {
-      const fileName = path.basename(asset);
-      const file = new File([await readFile(asset)], fileName);
+    } else if (isExplicitLocalFileAsset(asset)) {
+      const fileName = path.basename(asset.path);
+      const file = new File([await readFile(asset.path)], fileName);
       const response = await this.api.asset.postAssetFile({
         formData: { file },
       });
