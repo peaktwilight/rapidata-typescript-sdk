@@ -484,7 +484,7 @@ class CredentialManager {
 
   private async writeCredentials(credentials: StoredCredentialsFile) {
     await mkdir(path.dirname(this.configPath), { recursive: true });
-    await writeFile(this.configPath, `${JSON.stringify(credentials, null, 2)}\n`, "utf8");
+    await writeFile(this.configPath, `${JSON.stringify(credentials, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
     await chmod(this.configPath, 0o600);
   }
 
